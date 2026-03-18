@@ -122,7 +122,7 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, _ *C.char) int {
 					stringMap := make(map[string]interface{})
 					for key, value := range t {
 						strKey := fmt.Sprintf("%v", key)
-						stringMap[strKey] = value
+						stringMap[strKey] = normalize(value)
 					}
 					val, _ := json.Marshal(stringMap)
 					contents[k] = string(val)
@@ -172,6 +172,29 @@ func (callback *Callback) Fail(result *cls.Result) {
 	// This is a limitation of the CLS SDK callback interface
 	fmt.Printf("[error] cls log produce putlogs fail, request_id:[%s]. attempts: [%d], err: %s\n",
 		result.GetRequestId(), result.GetReservedAttempts(), result.GetErrorMessage())
+}
+
+func normalize(v interface{}) interface{} {
+    switch val := v.(type) {
+    case []byte:
+        return string(val)
+
+    case map[interface{}]interface{}:
+        m := make(map[string]interface{})
+        for k, vv := range val {
+            m[fmt.Sprintf("%v", k)] = normalize(vv)
+        }
+        return m
+
+    case []interface{}:
+        for i, vv := range val {
+            val[i] = normalize(vv)
+        }
+        return val
+
+    default:
+        return val
+    }
 }
 
 func main() {
